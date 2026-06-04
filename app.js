@@ -1,0 +1,215 @@
+// ── 1. DOM REFERENCES ──
+const hamburger = document.getElementById('hamburger');
+const nav = document.getElementById('nav');
+const recipeGrid = document.getElementById('recipeGrid');
+const modalOverlay = document.getElementById('modalOverlay');
+const openFormBtn = document.getElementById('openFormBtn');
+const modalClose = document.getElementById('modalClose');
+const saveRecipeBtn = document.getElementById('saveRecipeBtn');
+const searchInput = document.getElementById('searchInput');
+const categoryFilter = document.getElementById('categoryFilter');
+const shoppingPanel = document.getElementById('shoppingPanel');
+const shoppingItems = document.getElementById('shoppingItems');
+const closeShoppingPanel = document.getElementById('closeShoppingPanel');
+
+// ── 2. DATA (with image URLs for each recipe) ──
+let recipes = [
+  {
+    id: 1,
+    name: 'Jollof Rice',
+    category: 'dinner',
+    cuisine: 'Nigerian',
+    emoji: '🍚',
+    image: 'https://images.unsplash.com/photo-1596797038530-2c8fe029e8?w=400&h=300&fit=crop',
+    ingredients: ['2 cups rice', 'Tomato paste', 'Onions', 'Seasoning', 'Chicken stock'],
+    instructions: 'Fry tomato base, add stock, cook rice.',
+    isFavorite: false
+  },
+  {
+    id: 2,
+    name: 'Avocado Toast',
+    category: 'breakfast',
+    cuisine: 'International',
+    emoji: '🥑',
+    image: 'https://images.unsplash.com/photo-1588137372308-15f75323ca8d?w=400&h=300&fit=crop',
+    ingredients: ['2 slices bread', '1 ripe avocado', 'Salt', 'Pepper', 'Lemon'],
+    instructions: 'Toast bread, mash avocado, spread.',
+    isFavorite: false
+  },
+  {
+    id: 3,
+    name: 'Chicken Pasta',
+    category: 'dinner',
+    cuisine: 'Italian',
+    emoji: '🍝',
+    image: 'https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=400&h=300&fit=crop',
+    ingredients: ['200g pasta', 'Chicken breast', 'Cream', 'Garlic', 'Parmesan'],
+    instructions: 'Cook pasta, fry garlic and chicken, add cream.',
+    isFavorite: true
+  },
+  {
+    id: 4,
+    name: 'Mango Smoothie',
+    category: 'snack',
+    cuisine: 'Tropical',
+    emoji: '🥭',
+    image: 'https://images.unsplash.com/photo-1623065422902-30a2d299bbe4?w=400&h=300&fit=crop',
+    ingredients: ['2 mangoes', '1 cup milk', 'Honey', 'Ice cubes'],
+    instructions: 'Blend all until smooth.',
+    isFavorite: false
+  },
+  {
+    id: 5,
+    name: 'Chocolate Cake',
+    category: 'dessert',
+    cuisine: 'American',
+    emoji: '🎂',
+    image: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400&h=300&fit=crop',
+    ingredients: ['Flour', 'Cocoa', 'Sugar', 'Eggs', 'Butter', 'Milk', 'Baking powder'],
+    instructions: 'Mix, bake at 180C for 35 min.',
+    isFavorite: false
+  }
+];
+
+// ── 3. LOCALSTORAGE ──
+function saveToStorage() {
+  localStorage.setItem('recipebookData', JSON.stringify(recipes));
+}
+
+function loadFromStorage() {
+  const s = localStorage.getItem('recipebookData');
+  if (s !== null) recipes = JSON.parse(s);
+}
+
+// ── 4. RENDER ──
+function renderRecipes(list) {
+  if (list.length === 0) {
+    recipeGrid.innerHTML = `<div class='empty-state'><div class='icon'>🍽</div><p>No recipes found.</p></div>`;
+    return;
+  }
+
+  let html = '';
+  list.forEach(function(r) {
+    const preview = r.ingredients.slice(0, 3).map(i => `<span>• ${i}</span>`).join('');
+    const heart = r.isFavorite ? '❤' : '🤍';
+    const fc = r.isFavorite ? 'btn-icon btn-favorite active' : 'btn-icon btn-favorite';
+
+    // Use image if available, otherwise show emoji fallback
+    const imageHeader = r.image
+      ? `<div class='card-image' style='background-image: url("${r.image}")'></div>`
+      : `<div class='card-image' style='background: linear-gradient(135deg, var(--color-primary), var(--color-accent));'><span class='emoji-fallback'>${r.emoji || '🍽'}</span></div>`;
+
+    html += `<div class='card'>
+      ${imageHeader}
+      <div class='card-body'>
+        <h3 class='card-title'>${r.name}</h3>
+        <span class='card-badge'>${r.category}</span>
+        <p class='card-cuisine'>Cuisine: ${r.cuisine}</p>
+        <div class='card-ingredients'>${preview}</div>
+      </div>
+      <div class='card-actions'>
+        <button class='btn-icon btn-delete' data-id='${r.id}'>🗑 Delete</button>
+        <button class='btn-icon btn-shopping' data-id='${r.id}'>🛒 Shop</button>
+        <button class='${fc}' data-id='${r.id}'>${heart} Fav</button>
+      </div>
+    </div>`;
+  });
+
+  recipeGrid.innerHTML = html;
+  attachCardEvents();
+}
+
+// ── 5. CARD EVENTS ──
+function attachCardEvents() {
+  document.querySelectorAll('.btn-delete').forEach(btn => {
+    btn.addEventListener('click', function() {
+      if (!confirm('Delete this recipe?')) return;
+      recipes = recipes.filter(r => r.id !== Number(this.dataset.id));
+      saveToStorage();
+      renderRecipes(recipes);
+    });
+  });
+
+  document.querySelectorAll('.btn-favorite').forEach(btn => {
+    btn.addEventListener('click', function() {
+      toggleFavorite(Number(this.dataset.id));
+    });
+  });
+
+  document.querySelectorAll('.btn-shopping').forEach(btn => {
+    btn.addEventListener('click', function() {
+      openShoppingList(Number(this.dataset.id));
+    });
+  });
+}
+
+// ── 6. HAMBURGER ──
+hamburger.addEventListener('click', () => nav.classList.toggle('open'));
+
+// ── 7. MODAL ──
+openFormBtn.addEventListener('click', () => modalOverlay.classList.add('open'));
+modalClose.addEventListener('click', () => modalOverlay.classList.remove('open'));
+modalOverlay.addEventListener('click', e => {
+  if (e.target === modalOverlay) modalOverlay.classList.remove('open');
+});
+
+saveRecipeBtn.addEventListener('click', function() {
+  const name = document.getElementById('recipeName').value.trim();
+  const ingredients = document.getElementById('recipeIngredients').value.split('\n').map(l => l.trim()).filter(Boolean);
+  if (!name || !ingredients.length) { alert('Please enter a name and at least one ingredient.'); return; }
+
+  recipes.push({
+    id: Date.now(),
+    name,
+    category: document.getElementById('recipeCategory').value,
+    cuisine: document.getElementById('recipeCuisine').value.trim() || 'Not specified',
+    image: document.getElementById('recipeImage').value.trim() || '',
+    emoji: document.getElementById('recipeEmoji').value.trim() || '🍽',
+    ingredients,
+    instructions: document.getElementById('recipeInstructions').value.trim(),
+    isFavorite: false
+  });
+
+  saveToStorage();
+  renderRecipes(recipes);
+  modalOverlay.classList.remove('open');
+  ['recipeName', 'recipeCuisine', 'recipeImage', 'recipeIngredients', 'recipeInstructions', 'recipeEmoji']
+    .forEach(id => document.getElementById(id).value = '');
+});
+
+// ── 8. SEARCH & FILTER ──
+function applyFilters() {
+  const s = searchInput.value.toLowerCase().trim();
+  const c = categoryFilter.value;
+  renderRecipes(recipes.filter(r =>
+    (r.name.toLowerCase().includes(s) || r.cuisine.toLowerCase().includes(s))
+    && (c === 'all' || r.category === c)
+  ));
+}
+
+searchInput.addEventListener('input', applyFilters);
+categoryFilter.addEventListener('change', applyFilters);
+
+// ── 9. SHOPPING LIST ──
+closeShoppingPanel.addEventListener('click', () => shoppingPanel.classList.remove('open'));
+
+function openShoppingList(id) {
+  const r = recipes.find(recipe => recipe.id === id);
+  if (!r) return;
+
+  shoppingItems.innerHTML = `<p style='font-weight:600;color:#40916C;margin-bottom:16px'>${r.emoji || '🍽'} ${r.name}</p>
+    ${r.ingredients.map(i => `<div class='shopping-item'>🛒 ${i}</div>`).join('')}
+    <p style='margin-top:16px;color:#6B7280;font-size:.85rem'>${r.ingredients.length} items total</p>`;
+
+  shoppingPanel.classList.add('open');
+}
+
+// ── 10. FAVORITE TOGGLE ──
+function toggleFavorite(id) {
+  const r = recipes.find(recipe => recipe.id === id);
+  if (r) { r.isFavorite = !r.isFavorite; saveToStorage(); renderRecipes(recipes); }
+}
+
+// ── 11. INIT ──
+function init() { loadFromStorage(); renderRecipes(recipes); }
+init();
